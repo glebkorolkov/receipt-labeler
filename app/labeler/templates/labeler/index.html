@@ -1,0 +1,218 @@
+{% extends 'labeler/base.html' %}
+{% load static %}
+
+{% block title %}
+	<title>Receipt List</title>
+{% endblock %}
+
+{% block header %}
+	<nav class="navbar navbar-expand-lg navbar-dark">
+    <a class="navbar-brand" href="{% url 'labeler:index' %}{% if url_filters.all %}?{{ url_filters.all }}{% endif %}">
+      <img src="{% static 'labeler/receipt_logo.svg' %}" height="45" alt="">
+    </a>
+    <h2>Receipt list</h2>
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item">
+        <!-- <a class="nav-link active" href="{% url 'labeler:index' %}{% if url_filters.all %}?{{ url_filters.all }}{% endif %}">Receipt List</span></a> -->
+      </li>
+      <li class="nav-item">
+        <a class="btn btn-outline-light ml-3" href="{% url 'logout' %}">Log out</a>
+      </li>
+    </ul>
+  </nav>
+{% endblock %}
+
+{% block content %}
+	<div class="row padding">
+		<div class="col-12">
+			<div class="card">
+			  <div class="card-header">
+			    Search receipts
+			  </div>
+			  <div class="card-body">
+			    <form class="form-inline">
+						<div class="form-group mx-3 mb-2">
+						  <label for="q" class="sr-only">Search text</label>
+						  <input type="text" class="form-control" id="search-box" name="q" {% if q %}value="{{ q }}"{% endif %} placeholder="Enter receipt id or code">
+						</div>
+						<button type="submit" class="btn btn-primary mb-2">Search</button>
+						{% if q %}<a class="mx-3 mb-2 btn btn-outline-secondary" href="{% url 'labeler:index' %}">Clear</a>{% endif %}
+					</form>
+			  </div>
+			</div>
+		</div>
+	</div>
+	<div class="row padding">
+		<div class="col-12">
+		{% if receipt_list %}
+			<nav>
+			  <ul class="pagination pagination-sm justify-content-end">
+			    {% if receipt_list.paginator.num_pages > 1 %}
+			    	<li><small class="text-muted mr-3 align-baseline">Use &larr; or &rarr; buttons to move between pages</small></li>
+			    {% endif %}
+			    {% if receipt_list.has_previous %}
+				    <li class="page-item">
+				   		<a class="page-link" href="?page=1{%if q%}&q={{q|urlencode}}{% endif %}{% if not pred_display %}&pred=0{% endif %}" tabindex="-1">&laquo;</a>
+				    </li>
+				    <li class="page-item">
+				   		<a id="prev_page" class="page-link" href="?page={{ receipt_list.previous_page_number }}{%if q%}&q={{q|urlencode}}{% endif %}" tabindex="-1">&larr;</a>
+				    </li>
+			    {% else %}
+			    	<li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">&laquo;</a>
+				    </li>
+			    	<li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">&larr;</a>
+				    </li>
+			    {% endif %}
+			    <li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">Page {{ receipt_list.number }} of {{ receipt_list.paginator.num_pages }}</a>
+				    </li>
+			    {% if receipt_list.has_next %}
+				    <li class="page-item">
+				   		<a id="next_page" class="page-link" href="?page={{ receipt_list.next_page_number }}{%if q%}&q={{q|urlencode}}{% endif %}" tabindex="-1">&rarr;</a>
+				    </li>
+				    <li class="page-item">
+				   		<a class="page-link" href="?page={{ receipt_list.paginator.num_pages }}{%if q%}&q={{q|urlencode}}{% endif %}" tabindex="-1">&raquo;</a>
+				    </li>
+			    {% else %}
+			    	<li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">&rarr;</a>
+				    </li>
+				    <li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">&raquo;</a>
+				    </li>
+			    {% endif %}
+			  </ul>
+			</nav>
+    	<table class="table table-hover">
+			  <thead class="thead-dark">
+			    <tr>
+			    	<th scope="col">#</th>
+			      <th scope="col">Id</th>
+			      <th scope="col">Receipt code</th>
+			      <th scope="col" width="7%" class="text-center">Merchant</th>
+			      <th scope="col" width="7%" class="text-center">Amount</th>
+			      <th scope="col" width="7%" class="text-center">Sub-total</th>
+			      <th scope="col" width="7%" class="text-center">Tax</th>
+			      <th scope="col" width="7%" class="text-center">Date</th>
+			      {% if request.user.is_staff %}
+			      	<th scope="col" class="text-center">Assigned to</th>
+			      {% endif %}
+			      <th scope="col" class="text-center">Saved by</th>
+			      <th scope="col" class="text-center">Saved on</th>
+			    </tr>
+			  </thead>
+			  <tbody>
+		    {% for receipt in receipt_list %}
+		      <tr>
+		      	<td>{{ forloop.counter0|add:receipt_list.start_index }}</td>
+		      	<td>{{ receipt.id }}</td>
+		      	<td>
+		      		<a href="{% url 'labeler:receipt' receipt_id=receipt.id %}{% if url_filters.all %}?{% endif %}{{ url_filters.all }}">
+		      			{{ receipt.receipt_code }}
+		      		</a>
+		      	</td>
+		      	<td class="text-center">{% if receipt.label_input_merchant %}
+		      		<span class="fas fa-check-circle text-success"></span>
+		      	{% else %}
+		      		<span class="fas fa-times-circle text-danger"></span>
+		      	{% endif %}
+		      	</td>
+		      	<td class="text-center">{% if receipt.label_input_amount %}
+		      		<span class="fas fa-check-circle text-success"></span>
+		      	{% else %}
+		      		<span class="fas fa-times-circle text-danger"></span>
+		      	{% endif %}
+		      	</td>
+		      	<td class="text-center">{% if receipt.label_input_sub_total %}
+		      		<span class="fas fa-check-circle text-success"></span>
+		      	{% else %}
+		      		<span class="fas fa-times-circle text-danger"></span>
+		      	{% endif %}
+		      	</td>
+		      	<td class="text-center">{% if receipt.label_input_tax %}
+		      		<span class="fas fa-check-circle text-success"></span>
+		      	{% else %}
+		      		<span class="fas fa-times-circle text-danger"></span>
+		      	{% endif %}
+		      	</td>
+		      	<td class="text-center">{% if receipt.label_input_date %}
+		      		<span class="fas fa-check-circle text-success"></span>
+		      	{% else %}
+		      		<span class="fas fa-times-circle text-danger"></span>
+		      	{% endif %}
+		      	</td>
+		      	{% if request.user.is_staff %}
+				  <td class="text-center">
+			      	{% if receipt.shoebox.user %}
+				      {{ receipt.shoebox.user }}
+					{% else %}
+					  &ndash;
+					{% endif %}
+			      </td>
+			      {% endif %}
+		      	<td class="text-center">
+		      		{{ receipt.labels.user_upd }}
+		      	</td>
+		      	<td>
+		      		{{ receipt.labels.date_upd }}
+		      	</td>
+		      </tr>
+		    {% endfor %}
+			  </tbody>
+			</table>
+			<nav>
+			  <ul class="pagination pagination-sm justify-content-end">
+			    {% if receipt_list.has_previous %}
+				    <li class="page-item">
+				   		<a class="page-link" href="?page=1{% if q %}&q={{ q|urlencode }}{% endif %}" tabindex="-1">&laquo;</a>
+				    </li>
+				    <li class="page-item">
+				   		<a class="page-link" href="?page={{ receipt_list.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}" tabindex="-1">&larr;</a>
+				    </li>
+			    {% else %}
+			    	<li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">&laquo;</a>
+				    </li>
+			    	<li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">&larr;</a>
+				    </li>
+			    {% endif %}
+			    <li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">Page {{ receipt_list.number }} of {{ receipt_list.paginator.num_pages }}</a>
+				    </li>
+			    {% if receipt_list.has_next %}
+				    <li class="page-item">
+				   		<a class="page-link" href="?page={{ receipt_list.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}" tabindex="-1">&rarr;</a>
+				    </li>
+				    <li class="page-item">
+				   		<a class="page-link" href="?page={{ receipt_list.paginator.num_pages }}{% if q %}&q={{ q|urlencode }}{% endif %}" tabindex="-1">&raquo;</a>
+				    </li>
+			    {% else %}
+			    	<li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">&rarr;</a>
+				    </li>
+				    <li class="page-item disabled">
+				   		<a class="page-link" href="#" tabindex="-1">&raquo;</a>
+				    </li>
+			    {% endif %}
+			  </ul>
+			</nav>
+		{% else %}
+			<p class="alert alert-warning">No receipts are available.</p>
+		{% endif %}
+		</div>	
+  </div>
+  <div class="row">
+    <div class="col-12 padding footer">
+      <p>Logged in as <i>{{user.username}}</i>.</p>
+    </div>
+  </div>
+  <script src="{% static 'labeler/pagenav.js' %}"></script>
+  <script type="text/javascript">
+  	$(function () {
+  		$('[data-toggle="tooltip"]').tooltip()
+		})
+  </script>
+{% endblock %}

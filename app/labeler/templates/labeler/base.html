@@ -1,0 +1,44 @@
+{% load static %}
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{% static 'labeler/bootstrap.min.css' %}">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,700" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Krona+One" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
+    <!-- Stylesheet -->
+    <link href="{% static 'labeler/style.css' %}" type="text/css" rel="stylesheet">
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="{% static 'labeler/jquery-3.3.1.slim.min.js' %}"></script>
+    <script src="{% static 'labeler/popper.min.js' %}"></script>
+    <script src="{% static 'labeler/bootstrap.min.js' %}"></script>
+    
+    {% block extra_static %}
+    {% endblock %}
+
+    {% block title %}
+    {% endblock %}
+  </head>
+  <body>
+    <div class="container-fluid">
+    	<div class="row">
+    		<div class="col-12 header w3-2018-cherry-tomato">
+    			{% block header %}
+          {% endblock %}
+    		</div>
+    	</div>
+    	
+      {% block content %}
+      {% endblock %}
+  </body>
+</html>

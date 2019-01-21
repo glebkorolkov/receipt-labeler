@@ -1,0 +1,26 @@
+{% extends 'labeler/base.html' %}
+{% load static %}
+
+{% block title %}
+	<title>Logout</title>
+{% endblock %}
+
+{% block header %}
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <a class="navbar-brand" href="{% url 'labeler:index' %}">
+      <img src="{% static 'labeler/receipt_logo.svg' %}" height="45" alt="">
+    </a>
+    <h2>Login</h2>
+  </nav>
+{% endblock %}
+
+{% block content %}
+<div class="row padding"></div>
+<div class="row padding">
+	<div class="col-lg-4 col-md-3"></div>
+	<div class="col-lg-4 col-md-6">
+		<p class="alert alert-success">You have logged out! <a href="{% url 'login' %}">Log back in.</a></p>
+	</div>
+	<div class="col-lg-4 col-md-3"></div>
+</div>
+{% endblock %}

@@ -1,0 +1,354 @@
+{% extends 'labeler/base.html' %}
+{% load static %}
+
+{% block title %}
+  <title>Receipt #{{ receipt.id }}</title>
+{% endblock %}
+
+{% block extra_static %}
+  <script src="{% static 'labeler/d3.v5.min.js' %}"></script>
+{% endblock %}
+
+{% block header %}
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <a class="navbar-brand" href="{% url 'labeler:index' %}{% if url_filters.all %}?{{ url_filters.all }}{% endif %}">
+      <img src="{% static 'labeler/receipt_logo.svg' %}" height="45" alt="">
+    </a>
+    <h2>Receipt #{{ receipt.id }} <small class="d-sm-none d-md-none d-lg-none d-xl-inline">({{ receipt.receipt_code }})</small></h2>
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'labeler:index' %}{% if url_filters.all %}?{{ url_filters.all }}{% endif %}">Receipt List</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="btn btn-outline-light ml-3" href="{% url 'logout' %}">Log out</a>
+      </li>
+    </ul>
+  </nav>
+{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col-sm-5 padding">
+      <div id="receipt-viz">
+      </div>
+    </div>
+    <div id="right-col" class="col-sm-7 padding">
+      <nav class="pt-3">
+      	<button id="zoom_toggle" class="btn btn-sm btn-outline-secondary float-left">
+      		Zoom Off
+      	</button>
+      	<button class="btn btn-link btn-sm float-left" 
+      					data-toggle="popover" 
+      					data-trigger="hover"
+      					title="Toggle zoom"
+      					data-content="Enables to zoom on receipt by scrolling. Experimental feature!">
+      		<span class="fas fa-info-circle text-muted"></span>
+      	</button>
+        <ul class="pagination pagination-sm justify-content-end">
+          {% if prev_id or next_id %}
+            <li><small class="text-muted mr-3 align-baseline">Use &larr; or &rarr; buttons to move between receipts</small></li>
+          {% endif %}
+          {% if prev_id %}
+            <li class="page-item">
+              <a class="page-link" id="prev_page" href="{% url 'labeler:receipt' receipt_id=prev_id %}{% if url_filters.all %}?{{ url_filters.all }}{% endif %}" tabindex="-1">&larr;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <a class="page-link" href="#" tabindex="-1">&larr;</a>
+            </li>
+          {% endif %} 
+             <li class="page-item">
+              <a class="page-link" href="{% url 'labeler:index' %}{% if url_filters.all %}?{{ url_filters.all }}{% endif %}" tabindex="-1">Back to List</a>
+            </li>
+          {% if next_id %}
+            <li class="page-item">
+              <a class="page-link" id="next_page" href="{% url 'labeler:receipt' receipt_id=next_id %}{% if url_filters.all %}?{{ url_filters.all }}{% endif %}" tabindex="-1">&rarr;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <a class="page-link" href="#" tabindex="-1">&rarr;</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      <div class="sticky-top pt-3">
+      	<div class="card ">
+	        <div class="card-header">
+	          Assign labels <button id="instruction_btn" class="btn btn-outline-info btn-sm ml-3" data-toggle="modal" data-target="#instructions_modal">Instructions</button>
+	          {% if receipt.labels.user_upd %}
+	          	<span class="float-right text-muted">Last saved by: <i>{{ receipt.labels.user_upd }}</i> on <i>{{ receipt.labels.date_upd }}</i></span>
+	          {% endif %}
+	        </div>
+	        <div class="card-body">
+	          <table class="table table-hover">
+	            <thead class="thead-dark">
+	              <tr>
+	                <th scope="col" width="15%">Metric</th>
+	                <th scope="col" width="50%">Action</th>
+	                <th scope="col" width="10%" class="text-center">Status</th>
+	                <th scope="col" width="25%">Value</th>
+	              </tr>
+	            </thead>
+	            <tbody>
+	            	<tr id="merchant_row" class="label_row">
+	                <td class="align-middle">Merchant:</td>
+	                <td class="align-middle">
+	                	<button id="assign_merchant" class="assign btn btn-primary mr-3">Assign</button>
+	                	<button id="missing_merchant" class="missing btn btn-secondary btn-sm">Missing</button>
+	                	<button id="broken_merchant" class="broken btn btn-secondary btn-sm">Broken</button>
+	                	<button id="undo_merchant" class="undo btn btn-outline-primary btn-sm ml-3">Undo</button>
+	                </td>
+	                <td class="align-middle text-center">
+	                	<h5 id="merchant_ok" style="{% if not receipt.label_input_merchant %}display: none;{% endif %}">
+	                		<span class="badge badge-success">OK</span>
+	                	</h5>
+	                	<h5 id="merchant_ng" style="{% if receipt.label_input_merchant %}display: none;{% endif %}">
+	                		<span class="badge badge-danger">NG</span>
+	                	</h5>
+	                </td>
+	                <td class="align-middle">
+	                	<span id="merchant_val" class="metric_val d-inline-block text-truncate">
+	                		{% if receipt.label_missing_merchant %}
+	                			[Missing]
+	                		{% elif receipt.label_broken_merchant %}
+	                			[Broken]
+	                		{% else %}
+	                			{{ receipt.label_val_merchant }}
+	                		{% endif %}
+	                	</span>
+	                </td>
+	              </tr>
+	              <tr id="date_row" class="label_row">
+	                <td class="align-middle">Date:</td>
+	                <td class="align-middle">
+	                	<button id="assign_date" class="assign btn btn-primary mr-3">Assign</button>
+	                	<button id="missing_date" class="missing btn btn-secondary btn-sm">Missing</button>
+	                	<button id="broken_date" class="broken btn btn-secondary btn-sm">Broken</button>
+	                	<button id="undo_date" class="undo btn btn-outline-primary btn-sm ml-3">Undo</button>
+	                </td>
+	                <td class="align-middle text-center">
+	                	<h5 id="date_ok" style="{% if not receipt.label_input_date %}display: none;{% endif %}">
+	                		<span class="badge badge-success">OK</span>
+	                	</h5>
+	                	<h5 id="date_ng" style="{% if receipt.label_input_date %}display: none;{% endif %}">
+	                		<span class="badge badge-danger">NG</span>
+	                	</h5>
+	                </td>
+	                <td class="align-middle">
+	                	<span id="date_val" class="metric_val d-inline-block text-truncate">
+	                		{% if receipt.label_missing_date %}
+	                			[Missing]
+	                		{% elif receipt.label_broken_date %}
+	                			[Broken]
+	                		{% else %}
+	                			{{ receipt.label_val_date }}
+	                		{% endif %}		
+	                	</span>
+	                </td>
+	              </tr>
+	              <tr id="sub_total_row" class="label_row">
+	                <td class="align-middle">Sub-total:</td>
+	                <td class="align-middle">
+	                	<button id="assign_sub_total" class="assign btn btn-primary mr-3">Assign</button>
+	                	<button id="missing_sub_total" class="missing btn btn-secondary btn-sm">Missing</button>
+	                	<button id="broken_sub_total" class="broken btn btn-secondary btn-sm">Broken</button>
+	                	<button id="undo_sub_total" class="undo btn btn-outline-primary btn-sm ml-3">Undo</button>
+	                </td>
+	                <td class="align-middle text-center">
+	                	<h5 id="sub_total_ok" style="{% if not receipt.label_input_sub_total %}display: none;{% endif %}">
+	                		<span class="badge badge-success">OK</span>
+	                	</h5>
+	                	<h5 id="sub_total_ng" style="{% if receipt.label_input_sub_total %}display: none;{% endif %}">
+	                		<span class="badge badge-danger">NG</span>
+	                	</h5>
+	                </td>
+	                <td class="align-middle">
+	                	<span id="sub_total_val" class="metric_val d-inline-block text-truncate">
+	                		{% if receipt.label_missing_sub_total %}
+	                			[Missing]
+	                		{% elif receipt.label_broken_sub_total %}
+	                			[Broken]
+	                		{% else %}
+	                			{{ receipt.label_val_sub_total }}
+	                		{% endif %}
+	                	</span>
+	                </td>
+	              </tr>
+	              <tr id="tax_row" class="label_row">
+	                <td class="align-middle">Tax:</td>
+	                <td class="align-middle">
+	                	<button id="assign_tax" class="assign btn btn-primary mr-3">Assign</button>
+	                	<button id="missing_tax" class="missing btn btn-secondary btn-sm">Missing</button>
+	                	<button id="broken_tax" class="broken btn btn-secondary btn-sm">Broken</button>
+	                	<button id="undo_tax" class="undo btn btn-outline-primary btn-sm ml-3">Undo</button>
+	                </td>
+	                <td class="align-middle text-center">
+	                	<h5 id="tax_ok" style="{% if not receipt.label_input_tax %}display: none;{% endif %}">
+	                		<span class="badge badge-success">OK</span>
+	                	</h5>
+	                	<h5 id="tax_ng" style="{% if receipt.label_input_tax %}display: none;{% endif %}">
+	                		<span class="badge badge-danger">NG</span>
+	                	</h5>
+	                </td>
+	                <td class="align-middle">
+	                	<span id="tax_val" class="metric_val d-inline-block text-truncate">
+	                		{% if receipt.label_missing_tax %}
+	                			[Missing]
+	                		{% elif receipt.label_broken_tax %}
+	                			[Broken]
+	                		{% else %}
+	                			{{ receipt.label_val_tax }}
+	                		{% endif %}
+	                	</span>
+	                </td>
+	              </tr>
+	              <tr id="amount_row" class="label_row">
+	                <td class="align-middle">Total:</td>
+	                <td class="align-middle">
+	                	<button id="assign_amount" class="assign btn btn-primary mr-3">Assign</button>
+	                	<button id="missing_amount" class="missing btn btn-secondary btn-sm">Missing</button>
+	                	<button id="broken_amount" class="broken btn btn-secondary btn-sm">Broken</button>
+	                	<button id="undo_amount" class="undo btn btn-outline-primary btn-sm ml-3">Undo</button>
+	                </td>
+	                <td class="align-middle text-center">
+	                	<h5 id="amount_ok" style="{% if not receipt.label_input_amount %}display: none;{% endif %}">
+	                		<span class="badge badge-success">OK</span>
+	                	</h5>
+	                	<h5 id="amount_ng" style="{% if receipt.label_input_amount %}display: none;{% endif %}">
+	                		<span class="badge badge-danger">NG</span>
+	                	</h5>
+	                </td>
+	                <td class="align-middle">
+	                	<span id="amount_val" class="metric_val d-inline-block text-truncate">
+	                		{% if receipt.label_missing_amount %}
+	                			[Missing]
+	                		{% elif receipt.label_broken_amount %}
+	                			[Broken]
+	                		{% else %}
+	                			{{ receipt.label_val_amount }}
+	                		{% endif %}
+	                	</span>
+	                </td>
+	              </tr>
+	            </tbody>
+	          </table>
+	          <hr/>
+	          <form id="save_form" class="form-inline" method="post">
+	          	{% csrf_token %}
+	          	<input type="hidden" class="selection_input" name="merchant_selection" value="{{ receipt.label_input_merchant }}">
+	          	<input type="hidden" class="selection_input" name="amount_selection" value="{{ receipt.label_input_amount }}">
+	          	<input type="hidden" class="selection_input" name="sub_total_selection" value="{{ receipt.label_input_sub_total }}">
+	          	<input type="hidden" class="selection_input" name="tax_selection" value="{{ receipt.label_input_tax }}">
+	          	<input type="hidden" class="selection_input" name="date_selection" value="{{ receipt.label_input_date }}">
+	          	<input type="hidden" name="receipt_id" value="{{ receipt.id }}">
+	          	<input type="submit" name="action" value="Save" class="btn btn-lg btn-primary">
+	          	<a class="btn btn-outline-primary ml-3" href="{% url 'labeler:receipt' receipt_id=next_id %}{% if url_filters.all %}?{{ url_filters.all }}{% endif %}" tabindex="-1">Go to next</a>
+	          	{% if receipt.looks_ok %}
+				      	<span class="text-success ml-3">Looks OK <i class="fas fa-info-circle" data-toggle="tooltip" title="The receipt looks good. You can still reassign labels."></i></span>
+				      {% endif %}
+	          </form>
+	          <div class="pt-3">
+	          	{% for message in messages %}
+	          	<p class="alert alert-{{ message.type }}">{{ message.content }}</p>
+	          	{% endfor %}
+	          </div>
+	        </div>
+	      </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12 padding footer">
+      <p>Logged in as <i>{{user.username}}</i>.</p>
+    </div>
+  </div>
+
+  <!-- Alert modal -->
+  <div id="simple_alert" class="modal fade" tabindex="-1">
+	  <div class="modal-dialog">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <h5 class="modal-title"><span class="fas fa-exclamation-triangle"></span> Alert</h5>
+	        <button type="button" class="close" data-dismiss="modal">
+	          <span>&times;</span>
+	        </button>
+	      </div>
+	      <div class="modal-body">
+	        <p id="simple_alert_msg"></p>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+	<!-- Submit modal -->
+  <div id="submit_alert" class="modal fade" tabindex="-1">
+	  <div class="modal-dialog">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <h5 class="modal-title"><span class="fas fa-exclamation-triangle"></span> Alert</h5>
+	        <button type="button" class="close" data-dismiss="modal">
+	          <span>&times;</span>
+	        </button>
+	      </div>
+	      <div class="modal-body">
+	        <p>You have assigned fewer labels than required. Please assign remaining labels. You can dismiss this message and save the receipt as is.</p>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+	        <button id="dismiss_submit" type="button" class="btn btn-primary">Dismiss and Submit</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+	<!-- Submit modal -->
+  <div id="instructions_modal" class="modal fade" tabindex="-1">
+	  <div class="modal-dialog">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <h5 class="modal-title"><span class="fas fa-info-circle"></span> Instructions</h5>
+	        <button type="button" class="close" data-dismiss="modal">
+	          <span>&times;</span>
+	        </button>
+	      </div>
+	      <div class="modal-body">
+	        <p>
+						Select a word on the receipt by clicking on it. You can select multiple words by clicking
+						while holding a <kbd>Ctrl</kbd> key on your keyboard. This may be needed if amount or merchant name are split across two
+						or several words.
+					</p>
+					<p>
+						Once you are done with your selection press the <button class="btn btn-primary btn-sm">Assign</button> button next to the metric you are trying
+						to label.
+				  </p>
+				  <p>
+				  	If the metric is missing (e.g. many receipts do not have <i>Subtotal</i> or <i>Tax</i>) click the 
+				  	<button class="btn btn-sm btn-outline-secondary">Missing</button> button.
+				  </p>
+				  <p>
+				  	In case the metric is on the receipt, however is corrupted (e.g. number missing digits or many letters detected wrong by the OCR) click the <button class="btn btn-sm btn-outline-secondary">Broken</button>.
+				  </p>
+				  <p>
+				  	Press <button class="btn btn-sm btn-outline-primary">Undo</button> if you want to clear label for the
+				  	corresponding metric.
+				  </p>
+				  <p>
+				  	After labeling all metrics press <button class="btn btn-primary btn-sm">Save</button>, review labels and move
+				  	to the next receipt.
+				  </p>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+
+  <script type="text/javascript">
+    var receipt = {{ receipt_json|safe }}
+    var assigned = {{ assigned_json|safe }}
+  </script>
+  <script src="{% static 'labeler/labeler.js' %}"></script>
+  <script src="{% static 'labeler/pagenav.js' %}"></script>
+{% endblock %}
