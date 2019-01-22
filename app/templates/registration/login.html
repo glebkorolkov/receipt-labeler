@@ -25,7 +25,7 @@
 		{% endif %}
 		<form method="post" action="{% url 'login' %}">
 			{% csrf_token %}
-		  <p class="alert alert-info">Please ask site admin for access details if you do not have them.</p>
+		  <p class="alert alert-info">Username: <i>guest</i>. Password: <i>guestguest</i>.</p>
 		  <div class="form-group">
 		    {{ form.username|as_crispy_field }}
 		    <!-- <small id="username-help" class="form-text text-muted">Enter username, not email.</small> -->
