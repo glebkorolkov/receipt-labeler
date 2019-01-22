@@ -150,3 +150,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ]
 }
+
+# Receipt image bucket url
+RECEIPT_IMG_PATH = 'https://s3.amazonaws.com/receipt-labeler/images/'

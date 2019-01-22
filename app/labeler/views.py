@@ -1,4 +1,5 @@
 import json
+import os
 
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator
@@ -6,6 +7,7 @@ from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 from .models import *
+from app.settings import RECEIPT_IMG_PATH
 
 
 @login_required
@@ -143,6 +145,10 @@ def receipt_view(request, receipt_id):
         words = receipt.words.filter(**{'labels__' + lbl: True}).all()
         assigned[lbl] = [word.id for word in words]
 
+    # Build url of receipt image
+    receipt_image_name = str(receipt.id) + '_' + receipt.receipt_code + '.png'
+    receipt_image_url = os.path.join(RECEIPT_IMG_PATH, receipt_image_name)
+
     # Build template context
     context = {
         'receipt': receipt,
@@ -154,6 +160,7 @@ def receipt_view(request, receipt_id):
         'page': page,
         'url_filters': make_url_filters(request),
         'messages': messages,
+        'receipt_image_url': receipt_image_url,
     }
 
     # Render and return page

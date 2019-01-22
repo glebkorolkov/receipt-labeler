@@ -75,6 +75,9 @@
       	<div class="card ">
 	        <div class="card-header">
 	          Assign labels <button id="instruction_btn" class="btn btn-outline-info btn-sm ml-3" data-toggle="modal" data-target="#instructions_modal">Instructions</button>
+	          {% if receipt_image_url %}
+	          	<button class="btn btn-info btn-sm" data-toggle="modal" data-target="#image_modal">Image</button>
+	          {% endif %}
 	          {% if receipt.labels.user_upd %}
 	          	<span class="float-right text-muted">Last saved by: <i>{{ receipt.labels.user_upd }}</i> on <i>{{ receipt.labels.date_upd }}</i></span>
 	          {% endif %}
@@ -302,7 +305,7 @@
 	    </div>
 	  </div>
 	</div>
-	<!-- Submit modal -->
+	<!-- Instructions modal -->
   <div id="instructions_modal" class="modal fade" tabindex="-1">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
@@ -337,6 +340,25 @@
 				  	After labeling all metrics press <button class="btn btn-primary btn-sm">Save</button>, review labels and move
 				  	to the next receipt.
 				  </p>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+	<!-- Image modal -->
+  <div id="image_modal" class="modal fade" tabindex="-1">
+	  <div class="modal-dialog modal-lg">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <h5 class="modal-title"><span class="fas fa-info-circle"></span> Receipt image</h5>
+	        <button type="button" class="close" data-dismiss="modal">
+	          <span>&times;</span>
+	        </button>
+	      </div>
+	      <div class="modal-body">
+	        <img style="width: 100%" src="{{ receipt_image_url }}">
 	      </div>
 	      <div class="modal-footer">
 	        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
